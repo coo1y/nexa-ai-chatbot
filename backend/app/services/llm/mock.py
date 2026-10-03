@@ -48,7 +48,7 @@ class MockProvider:
                 yield Finish(reason="tool_calls", prompt_tokens=_count(request), completion_tokens=8)
                 return
 
-        text = _compose_answer(request, last_user)
+        text = _compose_answer(request.messages, last_user)
         for token in re.findall(r"\S+\s*|\n", text):
             if delay:
                 await asyncio.sleep(delay)
@@ -81,29 +81,26 @@ def _plan_tool_call(text: str, available: set[str]) -> ToolCall | None:
     return None
 
 
-def _compose_answer(request: CompletionRequest, last_user: str) -> str:
-    last = request.messages[-1]
+def _compose_answer(messages: list[dict[str, Any]], last_user: str) -> str:
+    last = messages[-1]
     if last.get("role") == "tool":
         content = str(last.get("content", ""))
         if "<search_results query=" in content:
             summary = _first_line(content)
-            # Not a web handler (Flask XSS rule false positive): the text is streamed as Markdown,
-            # which the frontend renders without raw HTML.
-            return (  # nosemgrep
+            return (
                 "Here is what I found on the web [1]. The results were summarised from the listed sources [2].\n\n"
                 + summary
             )
         return f"The tool returned: {content[:500]}"
 
     has_image = any(
-        isinstance(m.get("content"), list) and any(p.get("type") == "image_url" for p in m["content"])
-        for m in request.messages
+        isinstance(m.get("content"), list) and any(p.get("type") == "image_url" for p in m["content"]) for m in messages
     )
-    if any("<search_results query=" in str(m.get("content")) for m in request.messages):
+    if any("<search_results query=" in str(m.get("content")) for m in messages):
         return "According to recent sources, here is a summary of the latest information [1]. Additional context is available [2]."
     if has_image:
         return "Mock vision analysis: the image shows the uploaded picture. I can describe colours, objects and layout."
-    joined = " ".join(str(m.get("content")) for m in request.messages if isinstance(m.get("content"), str))
+    joined = " ".join(str(m.get("content")) for m in messages if isinstance(m.get("content"), str))
     if "<document name=" in joined:
         if "summar" in last_user.lower():
             return "**Summary:** The document discusses its main topic. Key points:\n\n- Point one\n- Point two"
