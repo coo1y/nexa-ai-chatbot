@@ -28,7 +28,7 @@ path traversal, dev-only). Resolved before the scan by upgrading to `vitest@4.1.
 | S-3 | bandit `B101` assert used | `backend/app/services/safety.py` (guard model) | Low | **True positive**: asserts are stripped under `python -O`, turning a guard into an `AttributeError` | Replaced with an explicit check. |
 | S-4 | bandit `B311` random | `backend/app/services/chat.py` retry jitter | Low | False positive (not cryptographic) | Annotated `# nosec B311` with reason. |
 | S-5 | bandit `B101/B404/B603` | `agent-hooks/tests/` | Low | Expected in tests | Tests excluded from the bandit scope. |
-| S-6 | semgrep `python.flask…directly-returned-format-string` | `backend/app/services/llm/mock.py` | Blocking | False positive — not Flask, not an HTTP response; output is Markdown rendered without raw HTML | Inline `# nosemgrep` with justification. |
+| S-6 | semgrep `python.flask…directly-returned-format-string` | `backend/app/services/llm/mock.py` | Blocking | False positive — not Flask, not an HTTP response; output is Markdown rendered without raw HTML | Initially an inline `# nosemgrep`, but GitHub code scanning still opened alert #1 from the uploaded SARIF. Root cause: the helper's `CompletionRequest` parameter was named `request`, matching the rule's Flask `request.$FUNC[...]` taint source. `_compose_answer` now takes the message list, so the rule no longer matches and the suppression is gone. |
 | S-7 | gitleaks scan did not execute | `security/run-scans.sh` | Process gap | **True positive (tooling)** — a green CI badge would have hidden that secret scanning never ran | Fixed invocation; added `.gitleaks.toml` (default rules, dependency dirs allow-listed); verified "no leaks found". |
 
 ## Findings from manual review (not detectable by the scanners)
