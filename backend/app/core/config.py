@@ -40,9 +40,11 @@ class Settings(BaseSettings):
     llm_provider: Literal["openai_compatible", "mock"] = "mock"
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: SecretStr | None = None
-    model_fast: str = "llama-3.3-70b-versatile"
+    # Groq retired llama-3.3-70b-versatile and llama-4-scout for free/developer tiers in 2026
+    # (404 model_not_found); qwen3.8-27b is multimodal, so it serves both Fast and Vision.
+    model_fast: str = "qwen/qwen3.8-27b"
     model_reasoning: str = "openai/gpt-oss-120b"
-    model_vision: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    model_vision: str = "qwen/qwen3.8-27b"
     llm_timeout_seconds: float = 60.0
     llm_max_retries: int = Field(default=3, ge=0, le=10)
     llm_retry_base_delay_seconds: float = 0.5
