@@ -43,3 +43,18 @@ test('upload and analyse an image with the vision capability', async ({ page }) 
   await expect(lastAssistant(page).locator('.route-badge')).toContainText('Vision');
   await expect(lastAssistant(page)).toContainText('Mock vision analysis');
 });
+
+test('open a sent image full size and close it', async ({ page }) => {
+  await page.getByTestId('file-input').setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: PNG });
+  await sendMessage(page, 'What is in this picture?');
+  await waitForReply(page);
+
+  await page.getByRole('button', { name: 'View dot.png' }).click();
+  const viewer = page.getByRole('dialog', { name: 'Image: dot.png' });
+  await expect(viewer).toBeVisible();
+  // The original (an object URL), not the 160px thumbnail stored in history.
+  await expect(viewer.getByRole('img', { name: 'dot.png' })).toHaveAttribute('src', /^blob:/);
+
+  await page.keyboard.press('Escape');
+  await expect(viewer).toBeHidden();
+});
