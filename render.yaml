@@ -34,5 +34,8 @@ services:
 databases:
   - name: nexa-db
     plan: free
+    # Must match the web service: Render's internal database hostname only resolves
+    # from services in the same region (otherwise migrations fail with "Name or service not known").
+    region: singapore
     databaseName: nexa
     user: nexa
