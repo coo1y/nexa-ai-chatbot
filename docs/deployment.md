@@ -46,6 +46,11 @@ After the first successful pipeline run, record the evidence here:
 
 ### Notes
 
+* The web service and the database must be in the **same region** (`render.yaml` pins both to
+  `singapore`). The `DATABASE_URL` Render injects uses the internal hostname, which does not
+  resolve across regions: the container then exits during `alembic upgrade head` with
+  `socket.gaierror: Name or service not known`. A Render database cannot change region, so
+  if it was created elsewhere, delete it and re-sync the Blueprint.
 * Render's free plan sleeps idle services (first request after idle is slow) and free
   Postgres instances expire after 30 days — use a paid plan for anything long-lived.
 * Metrics: `curl -H "Authorization: Bearer $OPS_TOKEN" $APP_URL/api/v1/metrics`.
