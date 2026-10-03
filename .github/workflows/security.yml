@@ -70,13 +70,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t nexa:scan .
-      - uses: aquasecurity/trivy-action@0.33.1
+      # Pinned to a commit SHA: trivy-action tags carry a "v" prefix and are mutable.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: nexa:scan
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: config
           scan-ref: .
