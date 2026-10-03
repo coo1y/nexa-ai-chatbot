@@ -38,6 +38,22 @@ is no memory across conversations.
 <img src="docs/images/chat-dark.png" width="49%" alt="Dark mode"/>
 </p>
 
+### Live examples
+
+Screenshots from the deployed app (<https://nexa-c8g1.onrender.com>) answering with real
+open-source models on Groq:
+
+**Automatic web search with citations.** Auto routing picks *Fast*, Nexa searches the web for a
+time-sensitive question, answers with a table and `[n]` citations, and lists the 5 sources in
+the Sources panel.
+
+![Top 3 countries at the 2026 Asian Games: web search, cited answer and Sources panel (dark theme)](docs/images/live-web-search-dark.webp)
+
+**Image understanding.** A screenshot is attached, so Auto routing switches to *Vision*, and
+the model reads the earlier failed chat in the image and explains what happened.
+
+![Vision mode explaining an attached screenshot of an earlier conversation (light theme)](docs/images/live-vision-light.webp)
+
 ## Architecture
 
 ```mermaid
