@@ -20,6 +20,8 @@ import { chatStore } from '../state/chatStore';
 import { useSettings } from '../state/settingsStore';
 import type { Attachment, Message } from '../state/types';
 import { formatBytes } from '../lib/files';
+import { originalImageUrl } from '../lib/imageCache';
+import { ImageViewer } from './ImageViewer';
 import { Markdown } from './Markdown';
 import { ToolActivityList } from './ToolActivityList';
 
@@ -27,14 +29,23 @@ const CAPABILITY_ICON = { fast: Zap, reasoning: Brain, vision: Eye } as const;
 const CAPABILITY_LABEL = { fast: 'Fast', reasoning: 'Reasoning', vision: 'Vision' } as const;
 
 export function AttachmentPreview({ attachment }: { attachment: Attachment }) {
-  if (attachment.kind === 'image' && attachment.previewUrl) {
+  const [viewing, setViewing] = useState(false);
+  const thumb =
+    attachment.kind === 'image' ? (attachment.previewUrl ?? originalImageUrl(attachment.fileId)) : undefined;
+  if (thumb) {
     return (
-      <img
-        className="attachment-thumb"
-        src={attachment.previewUrl}
-        alt={attachment.name}
-        title={attachment.name}
-      />
+      <>
+        <button
+          type="button"
+          className="attachment-thumb-button"
+          aria-label={`View ${attachment.name}`}
+          title={attachment.name}
+          onClick={() => setViewing(true)}
+        >
+          <img className="attachment-thumb" src={thumb} alt={attachment.name} />
+        </button>
+        <ImageViewer attachment={attachment} open={viewing} onClose={() => setViewing(false)} />
+      </>
     );
   }
   return (

@@ -12,6 +12,7 @@ import {
   validateFile,
 } from '../lib/files';
 import { randomId } from '../lib/clientId';
+import { forgetImage, rememberImage } from '../lib/imageCache';
 import { chatStore, useChat } from '../state/chatStore';
 import { useSettings } from '../state/settingsStore';
 import type { Attachment } from '../state/types';
@@ -124,6 +125,8 @@ export function Composer({ prefill, onPrefillUsed }: { prefill?: string; onPrefi
           pageCount: meta.page_count,
           previewUrl,
         };
+        // The sent message's image viewer shows this original; the thumbnail is only 160px.
+        if (pending.objectUrl) rememberImage(meta.id, pending.objectUrl);
         setUploads((current) =>
           current.map((u) => (u.localId === pending.localId ? { ...u, status: 'ready', attachment } : u)),
         );
@@ -139,8 +142,10 @@ export function Composer({ prefill, onPrefillUsed }: { prefill?: string; onPrefi
   function removeUpload(localId: string) {
     setUploads((current) => {
       const target = current.find((u) => u.localId === localId);
-      if (target?.objectUrl) URL.revokeObjectURL(target.objectUrl);
-      if (target?.attachment) api.deleteFile(target.attachment.fileId).catch(() => undefined);
+      if (target?.attachment) {
+        forgetImage(target.attachment.fileId);
+        api.deleteFile(target.attachment.fileId).catch(() => undefined);
+      } else if (target?.objectUrl) URL.revokeObjectURL(target.objectUrl);
       return current.filter((u) => u.localId !== localId);
     });
   }
@@ -149,7 +154,8 @@ export function Composer({ prefill, onPrefillUsed }: { prefill?: string; onPrefi
     event?.preventDefault();
     if (!canSend) return;
     const attachments = ready.map((u) => u.attachment!);
-    uploads.forEach((u) => u.objectUrl && URL.revokeObjectURL(u.objectUrl));
+    // Sent images keep their object URL (owned by imageCache) for the full-size viewer.
+    uploads.forEach((u) => !u.attachment && u.objectUrl && URL.revokeObjectURL(u.objectUrl));
     setText('');
     setUploads([]);
     setError(null);
