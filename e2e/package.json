@@ -1,0 +1,14 @@
+{
+  "name": "nexa-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser end-to-end tests: real frontend + real backend (deterministic mock LLM and search)",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

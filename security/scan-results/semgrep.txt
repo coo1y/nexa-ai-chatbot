@@ -1,0 +1,36 @@
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 232 files tracked by git with 278 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>      36     232          Community     278                                                                
+  python          151      51                                                                                           
+  ts               74      38                                                                                           
+  yaml              2       5                                                                                           
+  dockerfile        7       3                                                                                           
+  js               68       2                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 0 (0 blocking)
+ • Rules run: 269
+ • Targets scanned: 232
+ • Parsed lines: ~99.9%
+ • Scan skipped: 
+   ◦ Matching --exclude patterns: 6
+   ◦ Files larger than  files 1.0 MB: 16
+   ◦ Files matching .semgrepignore patterns: 16
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 269 rules on 232 files: 0 findings.
+(need more rules? `semgrep login` for additional free Semgrep Registry rules)
+
+If Semgrep missed a finding, please send us feedback to let us know!
+See https://semgrep.dev/docs/reporting-false-negatives/

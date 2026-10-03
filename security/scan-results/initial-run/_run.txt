@@ -1,0 +1,9 @@
+Scan run: 2026-10-03T12:23:34Z
+bandit: findings
+pip-audit: clean
+npm-audit-frontend: clean
+npm-audit-e2e: clean
+semgrep: findings
+gitleaks: findings
+trivy-image: findings
+trivy-config: findings

@@ -1,0 +1,14 @@
+# Gitleaks configuration: default rules, minus third-party/generated directories and the
+# deliberately fake keys used to test the secret-guard hook.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Dependencies, build output and scan reports"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)dist/''',
+  '''(^|/)(test-results|playwright-report|\.e2e-data|data)/''',
+  '''(^|/)security/scan-results/''',
+]

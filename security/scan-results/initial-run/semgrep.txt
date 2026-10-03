@@ -1,0 +1,52 @@
+Downloading semgrep (47.7MiB)
+ Downloaded semgrep
+Installed 66 packages in 170ms
+               
+               
+┌─────────────┐
+│ Scan Status │
+└─────────────┘
+  Scanning 228 files tracked by git with 278 Code rules:
+                                                                                                                        
+  Language      Rules   Files          Origin      Rules                                                                
+ ─────────────────────────────        ───────────────────                                                               
+  <multilang>      36     228          Community     278                                                                
+  python          151      51                                                                                           
+  ts               74      38                                                                                           
+  yaml              2       5                                                                                           
+  dockerfile        7       3                                                                                           
+  js               68       2                                                                                           
+                                                                                                                        
+                
+                
+┌──────────────┐
+│ Scan Summary │
+└──────────────┘
+✅ Scan completed successfully.
+ • Findings: 1 (1 blocking)
+ • Rules run: 269
+ • Targets scanned: 228
+ • Parsed lines: ~100.0%
+ • Scan skipped: 
+   ◦ Matching --exclude patterns: 6
+   ◦ Files larger than  files 1.0 MB: 16
+   ◦ Files matching .semgrepignore patterns: 16
+ • For a detailed list of skipped files and lines, run semgrep with the --verbose flag
+Ran 269 rules on 228 files: 1 finding.
+                  
+                  
+┌────────────────┐
+│ 1 Code Finding │
+└────────────────┘
+                                    
+    backend/app/services/llm/mock.py
+    ❯❱ python.flask.security.audit.directly-returned-format-string.directly-returned-format-string
+          ❰❰ Blocking ❱❱
+          Detected Flask route directly returning a formatted string. This is subject to cross-site scripting
+          if user input can reach the string. Consider using the template engine instead and rendering pages 
+          with 'render_template()'.                                                                          
+          Details: https://sg.run/Zv6o                                                                       
+                                                                                                             
+           89┆ return f"Here is what I found on the web [1]. The results were summarised from the listed
+               sources [2].\n\n{_first_line(content)}"                                                  
+

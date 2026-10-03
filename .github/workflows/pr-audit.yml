@@ -1,0 +1,39 @@
+# AI-assisted PR audit. Claude reviews each PR diff against the project's review checklist
+# (AGENTS.md + agent-capabilities/review-checklist.md) and posts findings as a PR comment.
+# Deterministic scanners (security.yml) remain the gate; this review is advisory and a human
+# reviewer decides. Runs only when the ANTHROPIC_API_KEY secret is configured.
+name: PR audit
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check configuration
+        id: cfg
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: echo "enabled=$([ -n "$KEY" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Audit this pull request using the checklist in agent-capabilities/review-checklist.md
+            and the rules in AGENTS.md. Focus on: correctness, OpenAPI contract drift
+            (openapi.yaml vs backend schemas vs frontend/src/api), safety-pipeline bypasses,
+            secrets or user content in logs, missing tests. Post one PR comment with findings
+            ranked by severity, each with file:line and a concrete fix. Do not push commits.
+          claude_args: --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),mcp__github_comment__update_claude_comment"

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "nexa": {
+      "command": "uv",
+      "args": ["run", "--quiet", "--project", "mcp-server", "python", "mcp-server/nexa_mcp.py"],
+      "env": {
+        "NEXA_BASE_URL": "http://localhost:8080",
+        "NEXA_ALLOWED_HOSTS": "localhost,127.0.0.1"
+      }
+    }
+  }
+}

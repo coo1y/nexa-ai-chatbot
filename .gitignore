@@ -1,0 +1,11 @@
+.env
+.DS_Store
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+dist/
+coverage/
+.e2e-data/
+test-results/
+playwright-report/

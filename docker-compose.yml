@@ -1,0 +1,59 @@
+# Full local stack: Postgres + FastAPI backend + nginx-served frontend.
+#
+#   cp .env.example .env      # optional: add LLM_API_KEY to use real models
+#   docker compose up --build
+#   open http://localhost:8080
+#
+# Without a .env file the stack runs with the deterministic mock model and mock search,
+# so it works offline and in CI.
+name: nexa
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexa-local-only}
+      POSTGRES_DB: nexa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexa -d nexa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: postgresql+asyncpg://nexa:${POSTGRES_PASSWORD:-nexa-local-only}@db:5432/nexa
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-mock}
+      LOG_JSON: "true"
+      RATE_LIMIT_CHAT_PER_MINUTE: ${RATE_LIMIT_CHAT_PER_MINUTE:-30}
+      CORS_ORIGINS: http://localhost:8080
+      # Protects GET /api/v1/metrics (required in production). Override in .env.
+      OPS_TOKEN: ${OPS_TOKEN:-local-dev-ops-token}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${NEXA_PORT:-8080}:8080"
+    environment:
+      BACKEND_HOST: backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

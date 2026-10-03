@@ -1,0 +1,4 @@
+Downloading pip (1.7MiB)
+ Downloaded pip
+Installed 29 packages in 61ms
+No known vulnerabilities found

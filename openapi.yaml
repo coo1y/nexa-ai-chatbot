@@ -1,0 +1,530 @@
+openapi: 3.1.0
+info:
+  title: Nexa AI Assistant API
+  version: 1.0.0
+  summary: Contract between the Nexa web frontend and the Python backend.
+  description: |
+    Nexa is an anonymous, web-based, multimodal AI assistant. Conversations are stored in the
+    browser; the backend is stateless with respect to conversation history and receives the
+    full message list on every turn.
+
+    **Contract-first workflow**
+    - This file is the source of truth. Frontend TypeScript types are generated from it
+      (`npm run gen:api` in `frontend/`), and CI fails if the generated file is stale.
+    - Backend contract tests (`backend/tests/integration/test_contract.py`) assert that the
+      FastAPI implementation exposes exactly these operations and schemas, and validate real
+      responses and every streamed event against the schemas below.
+
+    **Anonymous clients**
+    Every stateful call carries an `X-Client-Id` header: a random identifier generated once
+    per browser. It scopes uploads and feedback and is the extension point for optional user
+    accounts in a future version.
+
+    **Streaming protocol** (`POST /chat/stream`)
+    The response is `text/event-stream`. Each event has a name and a JSON `data` payload:
+
+    | event         | schema            | when                                                        |
+    |---------------|-------------------|-------------------------------------------------------------|
+    | `start`       | `StartEvent`      | always first; carries routing decision and message id       |
+    | `safety`      | `SafetyEvent`     | a request was blocked or needs a supportive notice          |
+    | `tool_call`   | `ToolCallEvent`   | a tool (search, calculator, ...) starts running             |
+    | `tool_result` | `ToolResultEvent` | that tool finished                                          |
+    | `sources`     | `SourcesEvent`    | cumulative list of web sources usable as `[n]` citations    |
+    | `delta`       | `DeltaEvent`      | a chunk of response text (Markdown)                         |
+    | `error`       | `ErrorEvent`      | generation failed after retries (friendly message)          |
+    | `done`        | `DoneEvent`       | always last                                                 |
+
+    Closing the connection stops generation.
+servers:
+  - url: /api/v1
+    description: Same-origin deployment (frontend and API behind one host)
+  - url: http://localhost:8000/api/v1
+    description: Local backend
+tags:
+  - name: chat
+  - name: files
+  - name: feedback
+  - name: meta
+
+paths:
+  /health:
+    get:
+      tags: [meta]
+      operationId: getHealth
+      summary: Liveness/readiness probe
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+        "503":
+          description: Database unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+
+  /capabilities:
+    get:
+      tags: [meta]
+      operationId: getCapabilities
+      summary: Model capabilities, tools and limits for the UI
+      responses:
+        "200":
+          description: Capabilities
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CapabilitiesResponse" }
+
+  /metrics:
+    get:
+      tags: [meta]
+      operationId: getMetrics
+      summary: Aggregated, content-free service metrics for operations
+      description: "Requires `Authorization: Bearer <OPS_TOKEN>` when the server sets `OPS_TOKEN`."
+      parameters:
+        - name: window_minutes
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 43200, default: 60 }
+        - name: authorization
+          in: header
+          required: false
+          schema: { type: [string, "null"] }
+      responses:
+        "200":
+          description: Metrics summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MetricsResponse" }
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /chat/stream:
+    post:
+      tags: [chat]
+      operationId: streamChat
+      summary: Generate an assistant response as a Server-Sent Events stream
+      description: |
+        Runs the pipeline: validation → context assembly → model routing → safety checks →
+        tools (web search, calculator, unit conversion, date/time, data processing) → streaming.
+        Regeneration and editing the latest message are expressed by resending the
+        conversation with the latest assistant message removed / the latest user message changed.
+      parameters:
+        - $ref: "#/components/parameters/ClientId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatRequest" }
+      responses:
+        "200":
+          description: Stream of chat events (see the event table in the API description).
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              x-stream-events:
+                start: { $ref: "#/components/schemas/StartEvent" }
+                safety: { $ref: "#/components/schemas/SafetyEvent" }
+                tool_call: { $ref: "#/components/schemas/ToolCallEvent" }
+                tool_result: { $ref: "#/components/schemas/ToolResultEvent" }
+                sources: { $ref: "#/components/schemas/SourcesEvent" }
+                delta: { $ref: "#/components/schemas/DeltaEvent" }
+                error: { $ref: "#/components/schemas/ErrorEvent" }
+                done: { $ref: "#/components/schemas/DoneEvent" }
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+
+  /files:
+    post:
+      tags: [files]
+      operationId: uploadFile
+      summary: Upload a document or image for analysis
+      description: |
+        Documents are converted to text; images are validated, stripped of metadata and
+        downscaled. Uploads are retained for `uploads.retention_hours` (see `/capabilities`)
+        and are only accessible with the uploading client's `X-Client-Id`.
+      parameters:
+        - $ref: "#/components/parameters/ClientId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: File processed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FileMeta" }
+        "413": { $ref: "#/components/responses/Error" }
+        "415": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /files/{file_id}:
+    parameters:
+      - name: file_id
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: "#/components/parameters/ClientId"
+    get:
+      tags: [files]
+      operationId: getFile
+      summary: Get uploaded file metadata
+      responses:
+        "200":
+          description: File metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FileMeta" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [files]
+      operationId: deleteFile
+      summary: Delete an uploaded file
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /feedback:
+    post:
+      tags: [feedback]
+      operationId: submitFeedback
+      summary: Rate an assistant response (👍/👎). Re-submitting updates the rating.
+      parameters:
+        - $ref: "#/components/parameters/ClientId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FeedbackRequest" }
+      responses:
+        "201":
+          description: Feedback recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackResponse" }
+        "200":
+          description: Existing rating updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackResponse" }
+        "422": { $ref: "#/components/responses/Error" }
+
+components:
+  parameters:
+    ClientId:
+      name: X-Client-Id
+      in: header
+      required: true
+      description: Anonymous browser-generated client identifier.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]{8,64}$"
+
+  responses:
+    Error:
+      description: Error with a user-safe message
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    # ---------- shared ----------
+    Capability:
+      type: string
+      enum: [fast, reasoning, vision]
+    CapabilityChoice:
+      type: string
+      enum: [auto, fast, reasoning, vision]
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, examples: [validation_error, rate_limited, unsupported_file] }
+        message: { type: string, description: Safe to display to the user. }
+        request_id: { type: [string, "null"] }
+        details: {}
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error: { $ref: "#/components/schemas/ErrorDetail" }
+
+    # ---------- chat request ----------
+    AttachmentRef:
+      type: object
+      additionalProperties: false
+      required: [file_id]
+      properties:
+        file_id: { type: string, pattern: "^[0-9a-f-]{36}$" }
+    ChatMessage:
+      type: object
+      additionalProperties: false
+      required: [id, role]
+      properties:
+        id: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string, maxLength: 100000, default: "" }
+        attachments:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/AttachmentRef" }
+    ChatRequest:
+      type: object
+      additionalProperties: false
+      required: [conversation_id, messages]
+      description: The full conversation; the last message must be a user message with text or attachments.
+      properties:
+        conversation_id: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 400
+          items: { $ref: "#/components/schemas/ChatMessage" }
+        capability:
+          $ref: "#/components/schemas/CapabilityChoice"
+          default: auto
+        web_search:
+          type: boolean
+          default: false
+          description: User explicitly requested a web search.
+
+    # ---------- chat stream events ----------
+    RoutingInfo:
+      type: object
+      additionalProperties: false
+      required: [mode, capability, model, reason]
+      properties:
+        mode: { type: string, enum: [auto, manual] }
+        capability: { $ref: "#/components/schemas/Capability" }
+        model: { type: string, description: Underlying open-source model id (informational). }
+        reason: { type: string }
+    Source:
+      type: object
+      additionalProperties: false
+      required: [id, title, url, domain, snippet]
+      properties:
+        id: { type: integer, description: "Citation number used as [n] in the response text." }
+        title: { type: string }
+        url: { type: string }
+        domain: { type: string }
+        snippet: { type: string }
+    Usage:
+      type: object
+      additionalProperties: false
+      required: [prompt_tokens, completion_tokens]
+      properties:
+        prompt_tokens: { type: [integer, "null"] }
+        completion_tokens: { type: [integer, "null"] }
+    StartEvent:
+      type: object
+      additionalProperties: false
+      required: [request_id, message_id, routing]
+      properties:
+        request_id: { type: string }
+        message_id: { type: string, description: Server id for the assistant message (used for feedback). }
+        routing: { $ref: "#/components/schemas/RoutingInfo" }
+    DeltaEvent:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string }
+    ToolCallEvent:
+      type: object
+      additionalProperties: false
+      required: [id, name, label, input]
+      properties:
+        id: { type: string }
+        name: { type: string, examples: [web_search, calculator, unit_convert, datetime, data_process] }
+        label: { type: string }
+        input: { type: object, additionalProperties: true }
+    ToolResultEvent:
+      type: object
+      additionalProperties: false
+      required: [id, name, status, summary, duration_ms]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [success, error, blocked] }
+        summary: { type: string }
+        duration_ms: { type: integer }
+    SourcesEvent:
+      type: object
+      additionalProperties: false
+      required: [sources]
+      properties:
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+    SafetyEvent:
+      type: object
+      additionalProperties: false
+      required: [action, category, message]
+      properties:
+        action: { type: string, enum: [allow_with_guidance, block] }
+        category: { type: string }
+        message: { type: string }
+    ErrorEvent:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable]
+      properties:
+        code: { type: string }
+        message: { type: string, description: Friendly message; no infrastructure details. }
+        retryable: { type: boolean }
+    DoneEvent:
+      type: object
+      additionalProperties: false
+      required: [finish_reason, usage, ttft_ms, duration_ms]
+      properties:
+        finish_reason: { type: string, enum: [stop, length, blocked, error] }
+        usage: { $ref: "#/components/schemas/Usage" }
+        ttft_ms: { type: [integer, "null"], description: Time to first visible output. }
+        duration_ms: { type: integer }
+
+    # ---------- files ----------
+    FileMeta:
+      type: object
+      additionalProperties: false
+      required: [id, filename, kind, content_type, size_bytes, char_count, page_count, truncated, width, height, created_at, expires_at]
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        kind: { type: string, enum: [document, image] }
+        content_type: { type: string }
+        size_bytes: { type: integer }
+        char_count: { type: integer, description: Extracted text length (0 for images). }
+        page_count: { type: [integer, "null"] }
+        truncated: { type: boolean }
+        width: { type: [integer, "null"] }
+        height: { type: [integer, "null"] }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: string, format: date-time }
+
+    # ---------- feedback ----------
+    FeedbackRequest:
+      type: object
+      additionalProperties: false
+      required: [conversation_id, message_id, rating]
+      properties:
+        conversation_id: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+        message_id: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+        rating: { type: string, enum: [up, down] }
+        comment: { type: [string, "null"], maxLength: 1000 }
+        capability:
+          oneOf:
+            - $ref: "#/components/schemas/Capability"
+            - type: "null"
+        model: { type: [string, "null"], maxLength: 128 }
+    FeedbackResponse:
+      type: object
+      additionalProperties: false
+      required: [id, message_id, rating, created_at, updated_at]
+      properties:
+        id: { type: string }
+        message_id: { type: string }
+        rating: { type: string, enum: [up, down] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    # ---------- meta ----------
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, version, environment, database, llm_provider, search_provider]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        version: { type: string }
+        environment: { type: string }
+        database: { type: string, enum: [ok, unavailable] }
+        llm_provider: { type: string }
+        search_provider: { type: string }
+    CapabilityInfo:
+      type: object
+      additionalProperties: false
+      required: [id, label, description, supports_images]
+      properties:
+        id: { $ref: "#/components/schemas/Capability" }
+        label: { type: string }
+        description: { type: string }
+        supports_images: { type: boolean }
+    ToolInfo:
+      type: object
+      additionalProperties: false
+      required: [name, label, description]
+      properties:
+        name: { type: string }
+        label: { type: string }
+        description: { type: string }
+    UploadLimits:
+      type: object
+      additionalProperties: false
+      required: [max_bytes, max_files_per_message, document_extensions, image_extensions, retention_hours]
+      properties:
+        max_bytes: { type: integer }
+        max_files_per_message: { type: integer }
+        document_extensions: { type: array, items: { type: string } }
+        image_extensions: { type: array, items: { type: string } }
+        retention_hours: { type: integer }
+    ChatLimits:
+      type: object
+      additionalProperties: false
+      required: [max_message_chars, max_messages]
+      properties:
+        max_message_chars: { type: integer }
+        max_messages: { type: integer }
+    CapabilitiesResponse:
+      type: object
+      additionalProperties: false
+      required: [default, capabilities, tools, uploads, chat]
+      properties:
+        default: { $ref: "#/components/schemas/CapabilityChoice" }
+        capabilities:
+          type: array
+          items: { $ref: "#/components/schemas/CapabilityInfo" }
+        tools:
+          type: array
+          items: { $ref: "#/components/schemas/ToolInfo" }
+        uploads: { $ref: "#/components/schemas/UploadLimits" }
+        chat: { $ref: "#/components/schemas/ChatLimits" }
+    Percentiles:
+      type: object
+      additionalProperties: false
+      required: [p50, p95, max]
+      properties:
+        p50: { type: [number, "null"] }
+        p95: { type: [number, "null"] }
+        max: { type: [number, "null"] }
+    MetricsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [window_minutes, since, total_requests, by_status, by_capability, errors_by_code, tool_usage, error_rate, total_retries, ttft_ms, duration_ms, feedback]
+      properties:
+        window_minutes: { type: integer }
+        since: { type: string, format: date-time }
+        total_requests: { type: integer }
+        by_status: { type: object, additionalProperties: { type: integer } }
+        by_capability: { type: object, additionalProperties: { type: integer } }
+        errors_by_code: { type: object, additionalProperties: { type: integer } }
+        tool_usage: { type: object, additionalProperties: { type: integer } }
+        error_rate: { type: number }
+        total_retries: { type: integer }
+        ttft_ms: { $ref: "#/components/schemas/Percentiles" }
+        duration_ms: { $ref: "#/components/schemas/Percentiles" }
+        feedback: { type: object, additionalProperties: { type: integer } }
