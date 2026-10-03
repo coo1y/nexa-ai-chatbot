@@ -37,12 +37,21 @@ changes ship with the code.
 
 ### Proof of deployment
 
-After the first successful pipeline run, record the evidence here:
+- **Live URL: <https://nexa-c8g1.onrender.com>** (Render free plan, region Singapore: web
+  service `nexa` + PostgreSQL 18 `nexa-db`)
+- Health check, 2026-10-03:
 
-- Live URL: `https://<your-service>.onrender.com`
-- `curl https://<your-service>.onrender.com/api/v1/health` →
-  `{"status":"ok","database":"ok","llm_provider":"openai_compatible",…}`
-- Link to the green GitHub Actions run with the `Deploy to Render` job.
+  ```console
+  $ curl https://nexa-c8g1.onrender.com/api/v1/health
+  {"status":"ok","version":"1.0.0","environment":"production","database":"ok","llm_provider":"openai_compatible","search_provider":"duckduckgo"}
+  ```
+
+  `database: ok` shows the migrations ran against the managed Postgres; `openai_compatible`
+  shows the real open-source models (Groq) are in use, not the mock.
+- CD run: the `Deploy to Render` job of the
+  [CI/CD workflow](https://github.com/coo1y/nexa-ai-chatbot/actions/workflows/ci.yml) on `main`.
+
+The free plan sleeps when idle: the first request after a pause can take 30–60 s.
 
 ### Notes
 
