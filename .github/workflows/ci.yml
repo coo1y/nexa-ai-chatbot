@@ -168,7 +168,9 @@ jobs:
           if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
             echo "::error::RENDER_DEPLOY_HOOK_URL secret is not configured (see docs/deployment.md)"; exit 1
           fi
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL?ref=${GITHUB_SHA}"
+          # Render hook URLs already carry "?key=…", so the commit ref is appended with "&".
+          case "$RENDER_DEPLOY_HOOK_URL" in *\?*) sep='&' ;; *) sep='?' ;; esac
+          curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}${sep}ref=${GITHUB_SHA}"
       - name: Wait for the new version and smoke test
         env:
           APP_URL: ${{ vars.APP_URL }}
