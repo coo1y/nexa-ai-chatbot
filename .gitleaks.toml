@@ -1,9 +1,11 @@
 # Gitleaks configuration: default rules, minus third-party/generated directories and the
 # deliberately fake keys used to test the secret-guard hook.
+# Use the singular [allowlist] table: gitleaks-action pins gitleaks 8.24.x, which silently
+# ignores the newer top-level [[allowlists]] array.
 [extend]
 useDefault = true
 
-[[allowlists]]
+[allowlist]
 description = "Dependencies, build output and scan reports"
 paths = [
   '''(^|/)node_modules/''',
