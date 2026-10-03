@@ -168,6 +168,20 @@ destructive-command guard, post-edit lint and type regeneration) · `.claude/set
 * [security/ai-tool-data-policy.md](security/ai-tool-data-policy.md) — data handling and AI tool use
 * [ops/](ops/) — runbook, SLOs, `make diagnose`, latency benchmark, incident-drill diagnosis outputs
 
+## Further improvements
+
+Chat history is private by design: conversations live only in the browser that created them
+(`localStorage`), and the server stores only short-lived uploads, ratings and content-free
+telemetry ([docs/database.md](docs/database.md)). That keeps Nexa anonymous, but it has
+trade-offs worth improving:
+
+| Today | Improvement | Where it plugs in |
+|---|---|---|
+| History is per browser and per device: another browser, a private window or cleared site data starts empty | **Export / import conversations** as a JSON file, to move history between browsers with no account | `ConversationRepository` in `frontend/src/storage/` |
+| No sync across devices (accounts and server-side history are out of MVP scope) | **Optional accounts with cloud sync**: opt-in, so anonymous use stays the default | A `users` table that owns `X-Client-Id`s; a server-backed `ConversationRepository` ([extension points](docs/architecture.md#extension-points-future-not-mvp)) |
+| Only uploads expire automatically (hourly purge after 24 h); `feedback` rows (including optional free-text comments) are kept until an operator deletes them, and the 30-day `chat_requests` retention in the [data policy](security/ai-tool-data-policy.md) is a manual SQL step | **Automatic retention**: purge telemetry after 30 days and feedback after a set period (e.g. 90 days) in the same loop as uploads | `_purge_loop` in `backend/app/main.py`, repositories in `backend/app/db/repositories.py` |
+| After a reload, the image viewer shows the small thumbnail kept in history (originals live only in the tab's memory) | **Keep full-size originals** in the browser's IndexedDB, which has far more room than `localStorage` | `frontend/src/lib/imageCache.ts` |
+
 ## Repository layout
 
 ```text
