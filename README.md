@@ -111,6 +111,8 @@ spec acceptance criterion to its tests is in [docs/testing.md](docs/testing.md).
 
 ## Deployment & CI/CD
 
+**Live: <https://nexa-c8g1.onrender.com>** (Render, Singapore; first request after idle may take ~1 min).
+
 * **CI** (`.github/workflows/ci.yml`) on every push/PR: backend lint/types/unit, migrations on
   Postgres, integration tests on Postgres, frontend lint/types/contract/tests/build, agent-pack
   tests, docker compose + Playwright e2e, production image build.
