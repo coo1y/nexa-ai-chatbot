@@ -19,7 +19,7 @@ flowchart LR
 | Frontend | React 19, TypeScript, Vite, Zustand, react-markdown + highlight.js | Chat UI, local conversation history, streaming renderer, settings/theming. All HTTP goes through `src/api/client.ts`, typed by types generated from `openapi.yaml`. |
 | Backend | Python 3.12, FastAPI, Pydantic v2, httpx, OpenAI SDK | Request pipeline: validation → routing → safety → tools → model → SSE streaming; uploads; feedback; metrics. |
 | Database | SQLAlchemy 2 (async) + Alembic; SQLite for dev/tests, PostgreSQL for compose/CI/production | Uploaded-file text and images (24 h retention), 👍/👎 feedback, content-free request telemetry. See [database.md](database.md). |
-| AI models | Any OpenAI-compatible host of open-source models | Capabilities map to configurable model ids: Fast (`llama-3.3-70b-versatile`), Reasoning (`openai/gpt-oss-120b`), Vision (`llama-4-scout`). A deterministic **mock provider** powers tests and offline demos. |
+| AI models | Any OpenAI-compatible host of open-source models | Capabilities map to configurable model ids: Fast (`qwen/qwen3.8-27b`), Reasoning (`openai/gpt-oss-120b`), Vision (`qwen/qwen3.8-27b`, multimodal). A deterministic **mock provider** powers tests and offline demos. |
 | Containers | Docker multi-stage builds, Docker Compose, nginx-unprivileged | `docker compose up` runs db + backend + frontend; the root `Dockerfile` builds a single production image. |
 | CI/CD | GitHub Actions → Render | Lint, types, unit, integration (Postgres), contract, frontend, e2e (compose + Playwright), image build, security scans → deploy hook → smoke test. See [deployment.md](deployment.md). |
 

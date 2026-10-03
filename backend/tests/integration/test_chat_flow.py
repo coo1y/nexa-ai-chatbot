@@ -36,9 +36,9 @@ async def test_manual_capability_selection(client: httpx.AsyncClient, mock_llm: 
         routing = events[0][1]["routing"]
         assert routing == {**routing, "mode": "manual", "capability": capability}
     assert [c.model for c in mock_llm.calls] == [
-        "llama-3.3-70b-versatile",
+        "qwen/qwen3.8-27b",
         "openai/gpt-oss-120b",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "qwen/qwen3.8-27b",
     ]
 
 

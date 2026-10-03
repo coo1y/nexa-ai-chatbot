@@ -10,7 +10,7 @@ All settings are environment variables (or `backend/.env`), defined in
 | `LLM_PROVIDER` | `mock` | `openai_compatible` or `mock` |
 | `LLM_BASE_URL` | `https://api.groq.com/openai/v1` | Any OpenAI-compatible endpoint (Groq, OpenRouter, Together, vLLM, Ollama) |
 | `LLM_API_KEY` | — | Provider key (required for `openai_compatible`) |
-| `MODEL_FAST` / `MODEL_REASONING` / `MODEL_VISION` | `llama-3.3-70b-versatile` / `openai/gpt-oss-120b` / `meta-llama/llama-4-scout-17b-16e-instruct` | Model per capability |
+| `MODEL_FAST` / `MODEL_REASONING` / `MODEL_VISION` | `qwen/qwen3.8-27b` / `openai/gpt-oss-120b` / `qwen/qwen3.8-27b` | Model per capability. Groq retires models regularly: a 404 `model_not_found` from the provider means an id must be updated ([deprecations](https://console.groq.com/docs/deprecations)) |
 | `LLM_MAX_RETRIES` | `3` | Retries after the first attempt |
 | `LLM_RETRY_BASE_DELAY_SECONDS` | `0.5` | Exponential backoff base |
 | `LLM_TIMEOUT_SECONDS` | `60` | Per request |
