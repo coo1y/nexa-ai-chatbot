@@ -13,7 +13,7 @@ Claude Code (`.claude/`, `.mcp.json`) but the pieces are plain files usable by o
 | MCP server | `mcp-server/nexa_mcp.py`, registered in `.mcp.json` | Tools: `contract_operations`, `contract_schema`, `contract_drift`, `service_health`, `service_metrics`, `chat_probe`; resource `nexa://openapi.yaml` |
 | Hooks / guardrails | `agent-hooks/`, wired in `.claude/settings.json` | `guard_secrets.py` (blocks secrets & env files), `protect_paths.py` (generated/immutable files, destructive shell commands), `post_edit_quality.sh` (lint feedback; auto-regenerates API types when `openapi.yaml` changes) |
 | Permissions | `.claude/settings.json` → [permissions.md](permissions.md) | allow / ask / deny lists |
-| Automated PR audit | `.github/workflows/pr-audit.yml` | Claude reviews each PR against the checklist (advisory; deterministic scans gate) |
+| Automated PR audit | `.github/workflows/pr-audit.yml` | Claude reviews each PR against the checklist when the `ANTHROPIC_API_KEY` secret is set (advisory; deterministic scans gate) |
 
 ## Typical flows
 

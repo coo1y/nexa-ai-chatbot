@@ -88,6 +88,9 @@ Nothing generated was accepted on trust. Every phase was verified by executing i
 | trivy | HIGH CVE in a Debian base package | `apt-get upgrade` in runtime stages |
 | incident drill | DB outage → unhandled 500 + traceback floods | handled 503, one-line warnings |
 | benchmark | rate limiter (correctly) throttled the benchmark → script crashed | robust benchmark + documented override |
+| first cloud deploy (Render log) | migrations failed with `Name or service not known`: the Blueprint pinned the web service to Singapore but left the database on Render's default region, and the internal DB hostname only resolves within one region | `region: singapore` on the database in `render.yaml`; database recreated |
+| deploy-job review | the CD job appended `?ref=…` to Render's hook URL, which already contains `?key=…`, corrupting the key | append the ref with `&` when the URL has a query string |
+| live smoke test (Groq monitoring: HTTP 404) | every Fast/Vision chat failed: Groq had retired `llama-3.3-70b-versatile` and `llama-4-scout` for free-tier accounts | switch both capabilities to the multimodal `qwen/qwen3.8-27b` |
 
 ## 4. Human review checklist (project owner)
 

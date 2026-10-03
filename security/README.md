@@ -14,4 +14,5 @@ Operational diagnosis outputs live in [`../ops/`](../ops/).
 
 CI: `.github/workflows/security.yml` runs bandit, pip-audit, npm audit, semgrep (SARIF upload),
 gitleaks and trivy on every PR, on `main`, and weekly. `.github/workflows/pr-audit.yml` adds an
-advisory AI review on each PR.
+advisory AI review on each PR when the `ANTHROPIC_API_KEY` secret is configured (it skips itself
+otherwise).
