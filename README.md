@@ -1,5 +1,8 @@
 # Nexa — fast, anonymous, multimodal AI assistant
 
+**Try it: <https://nexa-c8g1.onrender.com>** (no sign-up; the free hosting sleeps when idle, so
+the first load can take ~1 min).
+
 ![Nexa chat with web sources](docs/images/chat-sources-light.png)
 
 ## The problem
@@ -19,7 +22,7 @@ Nexa is a web assistant you can use immediately — no registration — built on
 |---|---|
 | Chat with streamed answers | Text appears token by token; **Stop** cancels instantly; **Regenerate** the latest answer; **edit** your latest message and get a new answer |
 | Let Nexa pick the model, or choose | **Auto** routing picks *Fast*, *Reasoning* or *Vision* per message (the reason is shown); override with one click |
-| Upload documents and images | PDF, DOCX, XLSX, text/Markdown/CSV/JSON/HTML and code files; PNG/JPEG/WebP/GIF. Summarise, ask questions, analyse several files independently |
+| Upload documents and images | PDF, DOCX, XLSX, text/Markdown/CSV/JSON/HTML and code files; PNG/JPEG/WebP/GIF. Summarise, ask questions, analyse several files independently; click an image to view it full size |
 | Search the web | Toggle **Search**, or Nexa searches automatically for time-sensitive questions; answers cite sources as `[n]` with a **Sources panel** |
 | Use built-in tools | Calculator, unit conversion, date/time & time zones, basic data processing (stats, sort, filter, group) — with live tool activity |
 | Keep your history private | Conversations live **only in your browser**; rename/delete them; uploads are deleted from the server after 24 h |
@@ -115,8 +118,8 @@ All settings: [docs/configuration.md](docs/configuration.md).
 |---|---|
 | `make test-unit` | 138 backend unit tests |
 | `make test-integration` | 41 backend integration tests: HTTP + database + contract + migrations (`TEST_DATABASE_URL=postgresql+asyncpg://… ` for Postgres) |
-| `make test-frontend` | 61 frontend tests (logic, store, API client, full-app UI) |
-| `make e2e` | 13 Playwright browser tests (starts backend + frontend automatically) |
+| `make test-frontend` | 66 frontend tests (logic, store, API client, image viewer, full-app UI) |
+| `make e2e` | 14 Playwright browser tests (starts backend + frontend automatically) |
 | `make e2e-docker` | the same against the docker compose stack |
 | `make test-hooks` / `make test-mcp` | agent extension pack tests |
 | `make check` | everything CI runs except e2e: lint, types, all tests, contract drift, build |
@@ -135,7 +138,8 @@ spec acceptance criterion to its tests is in [docs/testing.md](docs/testing.md).
 * **CD**: on `main`, once every job passes, the deploy job triggers Render's deploy hook,
   waits for `/api/v1/health`, and smoke-tests the live URL.
 * **Security** (`security.yml`): bandit, pip-audit, npm audit, semgrep, gitleaks, trivy — on
-  PRs, `main` and weekly. **PR audit** (`pr-audit.yml`): advisory AI review per PR.
+  PRs, `main` and weekly. **PR audit** (`pr-audit.yml`): advisory AI review per PR when the
+  `ANTHROPIC_API_KEY` secret is configured (the job skips itself otherwise).
 
 Setup steps (Render Blueprint `render.yaml`, secrets, proof of deployment):
 [docs/deployment.md](docs/deployment.md).
@@ -144,7 +148,7 @@ Setup steps (Render Blueprint `render.yaml`, secrets, proof of deployment):
 
 Built with Claude Code from the product spec and the grading rubric, contract-first, with
 every phase gated by executed verification (tests, screenshots, curl probes, scanners, chaos
-drill). The prompts, context files, task breakdown, the 17 defects caught by verification, and
+drill). The prompts, context files, task breakdown, the 20 defects caught by verification (3 of them during the first cloud deployment), and
 the human review checklist are in [docs/ai-workflow.md](docs/ai-workflow.md).
 
 ## Agent extension pack
